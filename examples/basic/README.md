@@ -7,13 +7,14 @@ This example demonstrates the minimal configuration required to deploy an Instan
 - Creates a single GCP Compute Engine instance to host the Instana agent
 - Installs Instana agent automatically via startup script
 - Configures GCP monitoring plugin with customer-provided service account credentials
-- Automatically discovers and monitors GCP resources:
+- Enables monitoring of GCP resources when explicitly enabled via `custom-config.yaml`:
   - Google Compute Engine instances
   - Google Cloud SQL databases
   - Google Kubernetes Engine (GKE) clusters
   - Google Cloud Storage buckets
   - Google Cloud Pub/Sub topics and subscriptions
   - Google Cloud Datastore
+
 
 ## Prerequisites
 
@@ -133,14 +134,7 @@ terraform output agent_status_command | bash
 - 1 x External IP address (ephemeral)
 - Instana agent installed and configured with GCP monitoring plugin
 - GCP service account credentials deployed to the agent
-- Automatic discovery and monitoring of GCP resources in the project
-
-## Estimated Cost
-
-Approximately **$33.57/month** (us-central1):
-- e2-medium instance: $24.27/month
-- 20GB disk: $2.00/month
-- External IP: $7.30/month
+- GCP resource monitoring available once explicitly enabled via `custom-config.yaml`
 
 ## Outputs
 
@@ -213,69 +207,3 @@ To destroy all resources:
 ```bash
 terraform destroy
 ```
-
-## Troubleshooting
-
-### Agent Not Installing
-
-Check the installation logs:
-```bash
-gcloud compute ssh instana-agent-basic --zone=us-central1-a \
-  --command='sudo cat /var/log/instana-agent-install.log'
-```
-
-### Agent Not Running
-
-Check the agent status:
-```bash
-gcloud compute ssh instana-agent-basic --zone=us-central1-a \
-  --command='sudo systemctl status instana-agent'
-```
-
-### GCP Resources Not Appearing
-
-Check the GCP monitoring configuration:
-```bash
-gcloud compute ssh instana-agent-basic --zone=us-central1-a \
-  --command='sudo cat /opt/instana/agent/etc/instana/configuration.yaml | grep -A 10 com.instana.plugin.gcp'
-```
-
-Verify service account permissions:
-```bash
-# Check if the service account has required permissions
-gcloud projects get-iam-policy YOUR_PROJECT_ID \
-  --flatten="bindings[].members" \
-  --filter="bindings.members:serviceAccount:instana-gcp-monitoring@YOUR_PROJECT_ID.iam.gserviceaccount.com"
-```
-
-### Network Connectivity Issues
-
-Ensure outbound HTTPS (443) is allowed to:
-- `setup.instana.io`
-- Your Instana backend endpoint
-- `monitoring.googleapis.com` (GCP Monitoring API)
-- `cloudresourcemanager.googleapis.com` (GCP Resource Manager API)
-
-## Important Notes
-
-### Single Project Monitoring
-The Instana GCP agent can monitor **only a single GCP project** at a time. Folder-level permissions do not enable automatic discovery across multiple projects. To monitor multiple projects:
-1. Deploy one dedicated agent per project
-2. Each agent requires its own host machine
-3. Each agent needs service account credentials for its specific project
-
-### Memory Requirements
-For large GCP environments with many resources, you may need to increase agent memory:
-```hcl
-agent_max_memory = 1024  # Increase from default 544MB to 1GB
-```
-
-### API Rate Limits
-The `poll_rate` field in `custom-config.yaml` controls how often the GCP Monitoring API is polled. Lower values provide more real-time data but increase API usage and costs.
-
-## Next Steps
-
-- See the [advanced example](../advanced/) for filtering resources and custom configurations
-- Review the [main module documentation](../../README.md)
-- Check the [troubleshooting guide](../../README.md#troubleshooting)
-- Learn about [GCP monitoring best practices](../../README.md#gcp-monitoring-best-practices)

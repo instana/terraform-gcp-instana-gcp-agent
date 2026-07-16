@@ -14,15 +14,15 @@ This example demonstrates a **production-ready** configuration for deploying an 
 
 ## Features Demonstrated
 
-- ✅ Larger machine type (`e2-standard-2`)
-- ✅ SSD persistent disk (50 GB, `pd-ssd`)
-- ✅ Dedicated service account for the VM
-- ✅ GCP service account key for remote monitoring
-- ✅ GCP poll rate and tag-based resource filtering
-- ✅ Increased agent memory (1024 MB)
-- ✅ Custom labels for organization and cost tracking
-- ✅ Network tags for firewall rules
-- ✅ Full set of GCP monitoring outputs
+- Larger machine type (`e2-standard-2`)
+- SSD persistent disk (50 GB, `pd-ssd`)
+- Dedicated service account for the VM
+- GCP service account key for remote monitoring
+- GCP poll rate and tag-based resource filtering
+- Increased agent memory (1024 MB)
+- Custom labels for organization and cost tracking
+- Network tags for firewall rules
+- Full set of GCP monitoring outputs
 
 ## Prerequisites
 
@@ -165,18 +165,8 @@ terraform output verify_gcp_monitoring_command | bash
 - Instana agent installed and configured with:
   - GCP remote monitoring plugin
   - GCP service account credentials deployed to `/opt/instana/agent/etc/instana/gcp-credentials.json`
-  - Automatic discovery and monitoring of GCP resources in the project
+  - GCP resource monitoring available once explicitly enabled via custom-config.yaml
 
-## GCP Resources Monitored
-
-The Instana GCP plugin automatically discovers and monitors:
-
-- Google Compute Engine instances
-- Google Cloud SQL databases
-- Google Kubernetes Engine (GKE) clusters
-- Google Cloud Storage buckets
-- Google Cloud Pub/Sub topics and subscriptions
-- Google Cloud Datastore
 
 ## Configuration Options
 
@@ -219,24 +209,6 @@ com.instana.plugin.gcp:
   include_tags: 'environment:production,team:platform'
   exclude_tags: 'environment:development,temporary:true'
 ```
-
-### Instana Agent Modes
-
-- `APM` — Application Performance Monitoring
-- `INFRASTRUCTURE` — Infrastructure monitoring only
-- `dynamic` — Dynamic mode (recommended default)
-- `AWS` — AWS-specific monitoring
-- `KUBERNETES` — Kubernetes monitoring
-
-## Estimated Cost
-
-Approximately **$64/month** (us-central1):
-
-| Resource | Cost |
-|----------|------|
-| `e2-standard-2` instance | ~$48.54/month |
-| 50 GB SSD disk | ~$8.50/month |
-| External IP | ~$7.30/month |
 
 ## Outputs
 
@@ -288,38 +260,6 @@ gcloud compute ssh instana-agent-prod-01 --zone=us-central1-a \
 4. Verify your GCP project appears
 5. Check that resources (GCE, Cloud SQL, GKE, Storage, Pub/Sub) are being discovered
 
-## Network Configuration
-
-### Using Default Network
-
-```hcl
-network    = "default"
-subnetwork = null
-```
-
-### Using Custom VPC
-
-```hcl
-network    = "my-custom-vpc"
-subnetwork = "my-custom-subnet-us-central1"
-```
-
-Ensure your VPC has:
-- Internet gateway or Cloud NAT for outbound access
-- Firewall rules allowing outbound HTTPS (443) to:
-  - `setup.instana.io`
-  - Your Instana backend endpoint
-  - `monitoring.googleapis.com`
-  - `cloudresourcemanager.googleapis.com`
-
-## Single Project Monitoring
-
-The Instana GCP agent monitors **one GCP project at a time**. To monitor multiple projects:
-
-1. Deploy one dedicated agent per project
-2. Each agent needs its own host VM
-3. Each agent requires service account credentials for its specific project
-
 ## Cleanup
 
 ```bash
@@ -330,51 +270,3 @@ This removes:
 - The Compute Engine instance
 - The dedicated service account
 - All associated resources
-
-## Troubleshooting
-
-### Agent Not Installing
-
-```bash
-terraform output agent_logs_command | bash
-# or
-gcloud compute ssh instana-agent-prod-01 --zone=us-central1-a \
-  --command='sudo cat /var/log/instana-agent-install.log'
-```
-
-### GCP Resources Not Appearing
-
-Check the GCP monitoring configuration:
-
-```bash
-terraform output verify_gcp_monitoring_command | bash
-```
-
-Verify service account permissions:
-
-```bash
-gcloud projects get-iam-policy YOUR_PROJECT_ID \
-  --flatten="bindings[].members" \
-  --filter="bindings.members:serviceAccount:instana-gcp-monitoring@YOUR_PROJECT_ID.iam.gserviceaccount.com"
-```
-
-### Service Account Issues
-
-If using a custom VPC, ensure the VM's service account has:
-- `compute.networkUser` role on the VPC
-- Access to required GCP APIs
-
-## Best Practices
-
-1. **Dedicated Monitoring Service Account** — Use a least-privilege service account for GCP monitoring
-2. **Dedicated VM Service Account** — Set `create_service_account = true` for the VM
-3. **SSD Disks** — Use `pd-ssd` for better agent performance
-4. **Tag Filtering** — Use `include_tags` in `custom-config.yaml` to limit monitoring scope in large projects
-5. **Memory** — Set `agent_max_memory = 1024` or higher for large GCP environments
-6. **Custom VPC** — Use custom VPC with proper network segmentation in production
-
-## Next Steps
-
-- Review the [basic example](../basic/) for the minimal configuration
-- Review the [main module documentation](../../README.md)
-- Set up alerting and custom dashboards in Instana

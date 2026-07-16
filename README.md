@@ -1,17 +1,17 @@
 # Terraform GCP Instana Agent Module
 
-A Terraform module for deploying [Instana](https://www.instana.com/) monitoring agents on Google Cloud Platform (GCP) for **remote monitoring of GCP resources**. This module automatically discovers and monitors GCP services including Compute Engine, Cloud SQL, GKE, Cloud Storage, Pub/Sub, and Datastore.
+A Terraform module for deploying [Instana](https://www.instana.com/) monitoring agents on Google Cloud Platform (GCP) to monitor GCP resources. This module supports monitoring of GCP services including Compute Engine, Cloud SQL, GKE, Cloud Storage, Pub/Sub, and Datastore when explicitly enabled via the Instana GCP plugin configuration.
 
 ## Features
 
-- ✅ **GCP Remote Monitoring**: Automatically discover and monitor GCP resources
-- ✅ **Multi-Service Support**: Monitor Compute Engine, Cloud SQL, GKE, Storage, Pub/Sub, Datastore
-- ✅ **Customer-Provided Credentials**: Use your own pre-existing service account key files
-- ✅ **Automated Configuration**: Instana agent and GCP plugin configured automatically
-- ✅ **Flexible Deployment**: Create new VM or install on existing VM
-- ✅ **Resource Filtering**: Include/exclude resources by labels
-- ✅ **Configurable Polling**: Adjust API polling rate for your needs
-- ✅ **Production-Ready**: Sensible defaults with full customization options
+- **GCP Monitoring**: Deploy an Instana agent to monitor GCP resources
+- **Multi-Service Support**: Supports monitoring of GCP services such as Compute Engine, Cloud SQL, GKE, Storage, Pub/Sub, and Datastore — each resource type must be explicitly enabled via the Instana GCP plugin `custom-config.yaml`
+- **Customer-Provided Credentials**: Use your own pre-existing service account key files
+- **Automated Configuration**: Instana agent installation, credential deployment, and optional custom configuration append
+- **Flexible Deployment**: Create new VM or install on existing VM
+- **Optional Resource Filtering**: Include/exclude resources by labels through custom Instana configuration
+- **Optional Polling Configuration**: Adjust API polling rate through custom Instana configuration
+- **Production-Ready**: Sensible defaults with full customization options
 
 ## Prerequisites
 
@@ -46,8 +46,6 @@ The service account must have these permissions:
 - `resourcemanager.projects.get` - Get project information
 - `cloudsql.instances.list` - List Cloud SQL instances
 - `storage.buckets.list` - List Cloud Storage buckets
-
-**Note**: The `roles/monitoring.viewer` role includes all required permissions.
 
 ### 2. GCP Project Requirements
 
@@ -89,26 +87,13 @@ The service account must have these permissions:
 
 ### 1. Create GCP Service Account (One-Time Setup)
 
-```bash
-# Create service account with monitoring permissions
-gcloud iam service-accounts create instana-gcp-monitoring \
-  --display-name="Instana GCP Monitoring" \
-  --project=YOUR_PROJECT_ID
+Follow the steps in [Prerequisites → GCP Service Account for Monitoring](#1-gcp-service-account-for-monitoring) to create the service account and download the JSON key file.
 
-gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
-  --member="serviceAccount:instana-gcp-monitoring@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/monitoring.viewer"
-
-# Download JSON key file
-gcloud iam service-accounts keys create ~/instana-gcp-key.json \
-  --iam-account=instana-gcp-monitoring@YOUR_PROJECT_ID.iam.gserviceaccount.com
-```
-
-### 2. Basic Usage - GCP Remote Monitoring
+### 2. Basic Usage - GCP Monitoring
 
 ```hcl
 module "instana_agent" {
-  source = "path/to/terraform-gcp-instana-agent"
+  source = "instana/instana-gcp-agent"
 
   # GCP Project to Monitor
   project_id    = "my-gcp-project"
@@ -135,7 +120,7 @@ You can provide a custom configuration file that will be appended to the agent's
 
 ```hcl
 module "instana_agent" {
-  source = "path/to/terraform-gcp-instana-agent"
+  source = "instana/instana-gcp-agent"
 
   # ... other configuration ...
 
@@ -161,7 +146,7 @@ com.instana.plugin.gcp.datastore:
   credentials_path: ''
 ```
 
-See [custom-config.yaml.example](custom-config.yaml.example) for a complete example.
+See [custom-config.yaml.example](https://github.com/instana/terraform-gcp-instana-agent/blob/gcp-tf-module/custom-config.yaml.example) for a complete example.
 
 ### 4. Create terraform.tfvars
 
@@ -206,7 +191,7 @@ Minimal configuration for development/testing:
 
 ```hcl
 module "instana_agent" {
-  source = "./terraform-gcp-instana-agent"
+  source = "instana/instana-gcp-agent"
 
   project_id            = "my-project"
   instance_name         = "instana-agent-dev"
@@ -217,7 +202,7 @@ module "instana_agent" {
 }
 ```
 
-See [examples/basic](examples/basic/) for complete example.
+See [examples/basic](https://github.com/instana/terraform-gcp-instana-agent/tree/gcp-tf-module/examples/basic) for complete example.
 
 ### Advanced Example
 
@@ -225,7 +210,7 @@ Production-ready configuration with all options:
 
 ```hcl
 module "instana_agent" {
-  source = "./terraform-gcp-instana-agent"
+  source = "instana/instana-gcp-agent"
 
   # Core configuration
   project_id            = "my-project"
@@ -261,7 +246,7 @@ module "instana_agent" {
 }
 ```
 
-See [examples/advanced](examples/advanced/) for complete example.
+See [examples/advanced](https://github.com/instana/terraform-gcp-instana-agent/tree/gcp-tf-module/examples/advanced/) for complete example.
 
 ## Deployment Modes
 
@@ -278,8 +263,9 @@ Default mode - creates a new VM with Instana agent:
 Install agent on an existing VM using gcloud:
 - `manage_instance = false`
 - Module does not create or modify the VM resource
-- Module generates installation command using gcloud compute ssh
-- User runs the generated command against the existing VM
+- Module connects to the existing VM using `gcloud compute ssh`
+- Module runs the installation automatically during `terraform apply` when `use_gcloud_ssh = true`
+- Module also exposes a rendered install command for manual execution if needed
 
 Example:
 
@@ -335,6 +321,15 @@ Notes:
 | `instana_endpoint_port` | Instana endpoint port | `number` | `443` |
 | `instana_agent_mode` | Agent mode (APM, INFRASTRUCTURE, etc.) | `string` | `"dynamic"` |
 
+### Optional Variables - GCP Monitoring Configuration
+
+| Name | Description | Type | Default |
+|------|-------------|------|---------|
+| `gcp_service_account_key_file` | Path to GCP service account JSON key file used for GCP monitoring configuration | `string` | `null` |
+| `gcp_credentials_path` | Path on the agent host where GCP credentials will be stored | `string` | `"/opt/instana/agent/etc/instana/gcp-credentials.json"` |
+| `custom_configuration_file` | Path to custom Instana `configuration.yaml` content to append | `string` | `null` |
+| `agent_max_memory` | Maximum memory allocation for the Instana agent in MB | `number` | `544` |
+
 ### Optional Variables - Deployment Mode and Service Account
 
 | Name | Description | Type | Default |
@@ -342,6 +337,8 @@ Notes:
 | `manage_instance` | Create and manage the VM in this module | `bool` | `true` |
 | `create_service_account` | Create dedicated service account for managed VM mode | `bool` | `false` |
 | `service_account_email` | Existing service account email for managed VM mode | `string` | `null` |
+| `use_iap_tunnel` | Use IAP tunnel for SSH in existing VM mode | `bool` | `false` |
+| `use_gcloud_ssh` | Use `gcloud compute ssh` in existing VM mode | `bool` | `true` |
 
 ### Optional Variables - Labels and Metadata
 
@@ -369,48 +366,20 @@ Notes:
 | `agent_runtime_logs_command` | Command to view runtime logs |
 | `existing_vm_install_script` | Rendered install script for existing VM mode |
 | `existing_vm_install_command` | gcloud-based install command for existing VM mode |
+| `gcp_monitoring_project_id` | GCP project ID being monitored |
+| `gcp_credentials_path` | Path where GCP credentials are stored on the agent host |
+| `gcp_monitoring_configuration` | Summary of GCP monitoring configuration |
+| `gcp_configuration_yaml_path` | Path to Instana `configuration.yaml` on the agent host |
+| `verify_gcp_monitoring_command` | Command to inspect the GCP monitoring configuration on the agent host |
 
-## Architecture
 
-### Components
+## Installation Flow
 
-```
-┌─────────────────────────────────────────┐
-│     Terraform Module                     │
-│  terraform-gcp-instana-agent            │
-├─────────────────────────────────────────┤
-│                                          │
-│  Variables → Locals → Resources         │
-│                                          │
-│  Resources Created:                      │
-│  • google_compute_instance (1)          │
-│  • google_service_account (0-1)         │
-│                                          │
-│  Outputs → Instance details, commands   │
-└─────────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────────┐
-│     GCP Infrastructure                   │
-│                                          │
-│  Compute Engine Instance                │
-│  • Startup Script Execution             │
-│    1. Download Instana setup script     │
-│    2. Install prerequisites             │
-│    3. Execute agent installation        │
-│    4. Configure zone (optional)         │
-│  • Instana Agent (running)              │
-└─────────────────────────────────────────┘
-         ↓
-    Instana Backend
-```
-
-### Installation Flow
-
-1. **Terraform Apply**: Creates GCP Compute Engine instance
-2. **First Boot**: Startup script executes automatically
+1. **Terraform Apply**: Creates GCP Compute Engine instance, or targets an existing VM depending on deployment mode
+2. **First Boot / Remote Execution**: Startup script executes automatically on a managed VM, or installation runs over `gcloud compute ssh` for an existing VM
 3. **Download**: Fetches Instana agent setup script
 4. **Install**: Installs prerequisites and Instana agent
-5. **Configure**: Sets up zone configuration (if specified)
+5. **Configure**: Deploys GCP credentials and appends custom configuration if provided
 6. **Verify**: Checks agent status and logs
 7. **Report**: Agent begins reporting to Instana backend
 
@@ -445,14 +414,14 @@ terraform {
 
 ### Public IP Access
 
-🔒 **SECURITY WARNING**: By default, this module creates instances **with a public IP** (`enable_public_ip = true`) so the agent can reach `setup.instana.io` and the Instana backend during installation. Set `enable_public_ip = false` only if your VPC has Cloud NAT configured for outbound internet access.
+🔒 **SECURITY WARNING**: By default, this module creates instances **with a public IP** (`enable_public_ip = true`) so the agent can reach `setup.instana.io` and the Instana backend during installation. Set `enable_public_ip = false` only if your VPC has outbound internet access via one of the supported egress paths — Cloud NAT, an organizational HTTP/HTTPS proxy, or a centralized internet gateway.
 
 #### Production Best Practices
 
 **✅ Recommended Configuration (Private IP):**
 ```hcl
 module "instana_agent" {
-  source = "./terraform-gcp-instana-agent"
+  source = "instana/instana-gcp-agent"
   
   # ... other configuration ...
   
@@ -468,7 +437,7 @@ module "instana_agent" {
 
 #### Network Connectivity Requirements
 
-**When External IP is NOT Present :**
+**When External IP Is NOT Present :**
 
 The VM requires two critical configurations for proper operation:
 
@@ -481,7 +450,7 @@ Identity-Aware Proxy (IAP) enables secure SSH access to VMs without external IPs
 
 ```hcl
 module "instana_agent" {
-  source = "./terraform-gcp-instana-agent"
+  source = "instana/instana-gcp-agent"
   
   # ... other configuration ...
   
@@ -508,11 +477,11 @@ The user or service account executing the SSH command needs:
 
 
 **IAP Benefits:**
-- ✅ No public IP required
-- ✅ Centralized access control via IAM
-- ✅ Audit logging of all connections
-- ✅ Context-aware access policies
-- ✅ No VPN infrastructure needed
+- No public IP required
+- Centralized access control via IAM
+- Audit logging of all connections
+- Context-aware access policies
+- No VPN infrastructure needed
 
 ##### 2. Outbound Internet Connectivity
 
@@ -528,7 +497,7 @@ If you enable public IP, the VM can directly access the internet:
 
 ```hcl
 module "instana_agent" {
-  source = "./terraform-gcp-instana-agent"
+  source = "instana/instana-gcp-agent"
   
   # ... other configuration ...
   
@@ -752,7 +721,6 @@ terraform output agent_runtime_logs_command | bash
 2. Navigate to **Infrastructure** → **Hosts**
 3. Search for your instance name
 4. Verify metrics are being reported
-5. Check the configured zone (if applicable)
 
 ## Maintenance
 
@@ -779,17 +747,6 @@ terraform apply
 terraform destroy
 ```
 
-## Best Practices
-
-1. **Use Remote State**: Always use encrypted remote backend for state storage
-2. **Dedicated Service Account**: Set `create_service_account = true` in production
-3. **Custom VPC**: Use custom VPC with proper network segmentation
-4. **Labels**: Use meaningful labels for cost tracking and organization
-5. **Zone Configuration**: Use zone names for logical grouping in Instana
-6. **Regular Updates**: Keep OS and agent updated
-7. **Monitoring**: Set up alerts in Instana for agent health
-8. **Documentation**: Document your specific configuration and customizations
-
 ## Module Development
 
 ### File Structure
@@ -805,7 +762,6 @@ terraform-gcp-instana-agent/
 ├── startup-script.sh          # Agent installation script
 ├── terraform.tfvars.example   # Example variables
 ├── README.md                  # This file
-├── .gitignore                 # Git ignore patterns
 └── examples/
     ├── basic/                 # Basic example
     └── advanced/              # Advanced example
@@ -837,7 +793,7 @@ terraform destroy
 
 ### Getting Help
 
-- Check the [examples](examples/) directory
+- Check the [examples](https://github.com/instana/terraform-gcp-instana-agent/tree/gcp-tf-module/examples/) directory
 - Review [troubleshooting](#troubleshooting) section
 - Check [Instana documentation](https://www.ibm.com/docs/en/instana-observability/current)
 - Review [GCP Compute Engine documentation](https://cloud.google.com/compute/docs)
@@ -851,15 +807,10 @@ When reporting issues, please include:
 - Relevant logs from `/var/log/instana-agent-install.log`
 - Your configuration (sanitized)
 
-## License
-
-This module is provided as-is for use with Instana monitoring on GCP.
-
 ## References
 
 - [Instana Documentation](https://www.ibm.com/docs/en/instana-observability/current)
 - [GCP Compute Engine](https://cloud.google.com/compute/docs)
 - [Terraform Google Provider](https://registry.terraform.io/providers/hashicorp/google/latest/docs)
-- [Terraform Best Practices](https://www.terraform.io/docs/cloud/guides/recommended-practices)
 
 ---
