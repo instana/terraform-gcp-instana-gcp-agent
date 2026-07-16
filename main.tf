@@ -79,13 +79,7 @@ resource "google_compute_instance" "instana_agent" {
     ]
   }
 
-  # Metadata including startup script
-  metadata = merge(
-    local.startup_script_metadata,
-    {
-      startup-script = file("${path.module}/startup-script.sh")
-    }
-  )
+  metadata = local.startup_script_metadata
 
   # Lifecycle configuration
   lifecycle {
@@ -118,13 +112,13 @@ resource "null_resource" "install_on_existing_vm_gcloud" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Installing Instana agent on existing VM: ${local.target_instance_name}"
-      gcloud compute ssh ${local.target_instance_name} \
-        --zone=${local.target_instance_zone} \
-        --project=${local.target_instance_project_id} \
-        ${var.use_iap_tunnel ? "--tunnel-through-iap" : ""} \
-        --command='sudo bash -s' <<'SCRIPT_EOF'
-${local.existing_vm_install_script}
-SCRIPT_EOF
+      printf '%s' '${base64encode(local.existing_vm_install_script)}' \
+        | base64 -d \
+        | gcloud compute ssh ${local.target_instance_name} \
+            --zone=${local.target_instance_zone} \
+            --project=${local.target_instance_project_id} \
+            ${var.use_iap_tunnel ? "--tunnel-through-iap" : ""} \
+            --command='sudo bash -s'
     EOT
   }
 
