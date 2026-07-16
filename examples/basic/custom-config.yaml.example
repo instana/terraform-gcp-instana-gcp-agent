@@ -1,0 +1,21 @@
+# ==============================================================================
+# Example Custom Configuration for Instana Agent - Basic Example
+# ==============================================================================
+# This file is appended to /opt/instana/agent/etc/instana/configuration.yaml
+# on the VM. 
+#
+# Usage:
+#   cp custom-config.yaml.example custom-config.yaml
+#   # edit custom-config.yaml as needed
+#   # then in terraform.tfvars set:
+#   #   custom_configuration_file = "/absolute/path/to/examples/basic/custom-config.yaml"
+#
+# Note: credentials_path is the only field updated automatically by Terraform
+#       at deploy time. Leave it as an empty string — it will be set correctly.
+# ==============================================================================
+
+com.instana.plugin.gcp:
+  credentials_path: ''    # Auto-updated by Terraform to match gcp_credentials_path
+  poll_rate: 60           # Seconds between GCP Monitoring API polls (recommended: 60)
+  exclude_tags: ''        # Optional: e.g. 'environment:development,temporary:true'
+  include_tags: ''        # Optional: e.g. 'environment:production,team:platform'

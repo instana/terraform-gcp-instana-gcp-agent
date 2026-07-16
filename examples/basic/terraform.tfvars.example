@@ -1,0 +1,47 @@
+# ==============================================================================
+# Basic Example - Terraform Variables
+# ==============================================================================
+#
+# Copy this file to terraform.tfvars and fill in your values
+# WARNING: Never commit terraform.tfvars to version control!
+#
+# Prerequisites:
+# 1. Create a GCP service account with monitoring permissions
+# 2. Download the JSON key file from GCP Console
+# 3. Update gcp_service_account_key_file with the path to your key file
+#
+
+# GCP Configuration
+project_id = "my-gcp-project-id"
+region     = "us-central1"
+zone       = "us-central1-a"
+
+# Instance Configuration
+instance_name = "instana-agent-basic"
+machine_type  = "e2-medium"
+
+# Instana Configuration
+instana_endpoint_host = "ingress-pink-saas.instana.rocks"
+instana_agent_key     = "your-agent-key-here"
+instana_download_key  = "your-download-key-here"
+instana_agent_mode    = "dynamic"
+
+# GCP Monitoring Configuration
+# Path to your GCP service account JSON key file
+# Example: "/path/to/my-gcp-monitoring-sa-key.json"
+# The service account must have these permissions:
+# - monitoring.timeSeries.list
+# - pubsub.subscriptions.list
+# - pubsub.topics.list
+# - resourcemanager.projects.get
+# - cloudsql.instances.list
+# - storage.buckets.list
+gcp_service_account_key_file = "/path/to/your-service-account-key.json"
+
+# Custom Configuration
+# Path to a custom configuration.yaml snippet to append to the agent config.
+# This is where poll_rate, include_tags, and exclude_tags for the GCP plugin are set.
+# Steps:
+#   cp custom-config.yaml.example custom-config.yaml
+#   # edit custom-config.yaml with your desired poll_rate, include/exclude tags
+#   custom_configuration_file = "/absolute/path/to/examples/basic/custom-config.yaml"
