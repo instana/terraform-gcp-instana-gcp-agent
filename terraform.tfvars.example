@@ -1,0 +1,119 @@
+# ==============================================================================
+# GCP Configuration
+# ==============================================================================
+
+project_id = "my-gcp-project-id"
+zone       = "us-central1-a"
+
+# ==============================================================================
+# GCP Monitoring Configuration
+# ==============================================================================
+
+# Path to GCP service account JSON key file (REQUIRED for GCP monitoring)
+gcp_service_account_key_file = "/path/to/your/gcp-service-account-key.json"
+
+# Path where the key file will be stored on the agent host
+gcp_credentials_path = "/opt/instana/agent/etc/instana/gcp-credentials.json"
+
+# ==============================================================================
+# Custom Configuration
+# ==============================================================================
+
+# Path to a custom configuration.yaml snippet to append to the agent config.
+# This is where poll_rate, include_tags, and exclude_tags for the GCP plugin are set.
+# Steps:
+#   cp custom-config.yaml.example custom-config.yaml
+#   # edit custom-config.yaml with your desired poll_rate, include/exclude tags
+#   custom_configuration_file = "/absolute/path/to/custom-config.yaml"
+
+# ==============================================================================
+# Agent Memory Configuration
+# ==============================================================================
+
+# Maximum memory allocation for the Instana agent in MB
+# Increase for large environments with many GCP resources
+agent_max_memory = 544
+
+# ==============================================================================
+# Instance Configuration
+# ==============================================================================
+
+instance_name     = "instana-agent-01"
+machine_type      = "e2-medium"
+boot_disk_size_gb = 20
+boot_disk_type    = "pd-balanced"
+
+# ==============================================================================
+# Instana Configuration
+# ==============================================================================
+
+# Instana backend endpoint (without port)
+instana_endpoint_host = "ingress-pink-saas.instana.rocks"
+instana_endpoint_port = 443
+
+# Instana credentials (REQUIRED - replace with your actual keys)
+# WARNING: Never commit this file with real credentials to version control
+instana_agent_key    = "your-agent-key-here"
+instana_download_key = "your-download-key-here"
+
+# Agent mode: APM, INFRASTRUCTURE, AWS, KUBERNETES, or dynamic
+instana_agent_mode = "dynamic"
+
+# ==============================================================================
+# Network Configuration (Optional)
+# ==============================================================================
+
+# Use default network
+network = "default"
+
+# For custom VPC, specify both network and subnetwork
+# network    = "custom-vpc-name"
+# subnetwork = "custom-subnet-name"
+
+# Assign external IP address
+enable_public_ip = true
+
+# Network tags for firewall rules
+tags = ["instana-agent", "monitoring"]
+
+# ==============================================================================
+# Service Account (Optional)
+# ==============================================================================
+
+# Create a dedicated service account for the instance
+create_service_account = false
+
+# Or use an existing service account
+# service_account_email = "my-sa@my-project.iam.gserviceaccount.com"
+
+# ==============================================================================
+# Labels (Optional)
+# ==============================================================================
+
+labels = {
+  managed_by  = "terraform"
+  monitoring  = "instana"
+  environment = "production"
+  team        = "platform"
+}
+
+# ==============================================================================
+# OS Image (Optional)
+# ==============================================================================
+
+# Debian 11 (default)
+image_family  = "debian-11"
+image_project = "debian-cloud"
+
+# Other options:
+# Debian 12
+# image_family  = "debian-12"
+# image_project = "debian-cloud"
+
+# Ubuntu 20.04 LTS
+# image_family  = "ubuntu-2004-lts"
+# image_project = "ubuntu-os-cloud"
+
+# Ubuntu 22.04 LTS
+# image_family  = "ubuntu-2204-lts"
+# image_project = "ubuntu-os-cloud"

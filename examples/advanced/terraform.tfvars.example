@@ -1,0 +1,123 @@
+# ==============================================================================
+# Advanced Example - Terraform Variables
+# ==============================================================================
+#
+# Copy this file to terraform.tfvars and fill in your values.
+# WARNING: Never commit terraform.tfvars to version control!
+#
+# Prerequisites:
+# 1. Create a GCP service account with monitoring permissions
+# 2. Download the JSON key file from GCP Console
+# 3. Update gcp_service_account_key_file with the path to your key file
+#
+
+# ==============================================================================
+# GCP Configuration
+# ==============================================================================
+
+project_id = "my-gcp-project-id"
+region     = "us-central1"
+zone       = "us-central1-a"
+
+# ==============================================================================
+# Instance Configuration
+# ==============================================================================
+
+instance_name     = "instana-agent-prod-01"
+machine_type      = "e2-standard-2"
+boot_disk_size_gb = 50
+boot_disk_type    = "pd-ssd"
+
+# OS Image
+image_family  = "debian-11"
+image_project = "debian-cloud"
+
+# ==============================================================================
+# Network Configuration
+# ==============================================================================
+
+# Use default network
+network = "default"
+
+# For custom VPC, uncomment and configure:
+# network    = "my-custom-vpc"
+# subnetwork = "my-custom-subnet-us-central1"
+
+enable_public_ip = true
+
+# Network tags for firewall rules
+tags = ["instana-agent", "monitoring", "production"]
+
+# ==============================================================================
+# Instana Configuration
+# ==============================================================================
+
+# Instana backend endpoint
+instana_endpoint_host = "ingress-pink-saas.instana.rocks"
+instana_endpoint_port = 443
+
+# Instana credentials (REQUIRED - replace with your actual keys)
+instana_agent_key    = "your-agent-key-here"
+instana_download_key = "your-download-key-here"
+
+# Agent configuration
+instana_agent_mode = "dynamic"
+
+# ==============================================================================
+# GCP Monitoring Configuration
+# ==============================================================================
+
+# Path to your GCP service account JSON key file.
+# The service account must have these permissions:
+#   - monitoring.timeSeries.list
+#   - pubsub.subscriptions.list
+#   - pubsub.topics.list
+#   - resourcemanager.projects.get
+#   - cloudsql.instances.list
+#   - storage.buckets.list
+gcp_service_account_key_file = "/path/to/your-service-account-key.json"
+
+# Path where the key file will be stored on the agent host (default is fine for most cases)
+gcp_credentials_path = "/opt/instana/agent/etc/instana/gcp-credentials.json"
+
+# Agent memory in MB — increase for large GCP environments (default 544 MB, 1024 MB here for production)
+agent_max_memory = 1024
+
+# Custom Configuration
+# Path to a custom configuration.yaml snippet to append to the agent config.
+# This is where poll_rate, include_tags, and exclude_tags for the GCP plugin are set.
+# Steps:
+#   cp custom-config.yaml.example custom-config.yaml
+#   # edit custom-config.yaml with your desired poll_rate, include/exclude tags
+#   custom_configuration_file = "/absolute/path/to/examples/advanced/custom-config.yaml"
+
+# ==============================================================================
+# Service Account
+# ==============================================================================
+
+# Create a dedicated service account for better security
+create_service_account = true
+
+# ==============================================================================
+# Labels
+# ==============================================================================
+
+labels = {
+  managed_by  = "terraform"
+  monitoring  = "instana"
+  environment = "production"
+  team        = "platform"
+  cost_center = "engineering"
+  application = "monitoring"
+}
+
+# ==============================================================================
+# Instance Management
+# ==============================================================================
+
+# Set to true to have Terraform create and manage the compute instance.
+# Set to false to install the Instana agent on a pre-existing VM using gcloud SSH.
+manage_instance = true
+
+# Allow instance to be stopped for updates
+allow_stopping_for_update = true
