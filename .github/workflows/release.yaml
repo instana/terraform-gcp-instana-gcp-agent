@@ -1,0 +1,49 @@
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+name: Release to Terraform Registry
+jobs:
+  Release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required to create releases
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4.2.2
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+
+    - name: Terraform Format Check
+      run: |
+        echo "Checking Terraform formatting..."
+        terraform fmt -check -recursive
+        echo "✅ Terraform formatting is correct"
+
+    - name: Terraform Init
+      run: |
+        echo "Initializing Terraform..."
+        terraform init -backend=false
+        echo "✅ Terraform initialized successfully"
+
+    - name: Terraform Validate
+      run: |
+        echo "Validating Terraform configuration..."
+        terraform validate
+        echo "✅ Terraform configuration is valid"
+
+    - name: Create GitHub Release
+      uses: ncipollo/release-action@v1.16.0
+      with:
+        generateReleaseNotes: true
+        name: "${{ github.ref_name }}"
+        token: ${{ secrets.GITHUB_TOKEN }}
+        body: |
+          ## Release ${{ github.ref_name }}
+
+          See [CHANGELOG.md](CHANGELOG.md) for detailed changes.
+
+          ---
