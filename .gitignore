@@ -1,0 +1,66 @@
+# ==============================================================================
+# Terraform .gitignore
+# ==============================================================================
+
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Exclude all .tfvars files, which are likely to contain sensitive data,
+# such as instana_agent_key, instana_download_key, and GCP credentials paths.
+*.tfvars
+*.tfvars.json
+
+# Ignore override files as they are usually used to override resources locally
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# Ignore Mac system files
+.DS_Store
+
+# Ignore backup files
+*.backup
+*.bak
+
+# Ignore lock files
+.terraform.lock.hcl
+
+# Ignore plan files
+*.tfplan
+
+# Ignore GCP service account key files — never commit credentials
+*.json
+!examples/**/*.json.example
+
+# Ignore any local scripts or notes
+*.local.*
+notes.txt
+TODO.txt
+
+# Ignore IDE/editor specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ignore temporary files
+*.tmp
+temp/
+tmp/
+
+# Ignore startup script rendered outputs
+*.rendered
