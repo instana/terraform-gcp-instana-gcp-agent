@@ -93,7 +93,8 @@ Follow the steps in [Prerequisites → GCP Service Account for Monitoring](#1-gc
 
 ```hcl
 module "instana_agent" {
-  source = "instana/instana-gcp-agent"
+  source  = "instana/instana-gcp-agent/gcp"
+  version = "1.0.0" # Replace with desired version
 
   # GCP Project to Monitor
   project_id    = "my-gcp-project"
@@ -120,7 +121,8 @@ You can provide a custom configuration file that will be appended to the agent's
 
 ```hcl
 module "instana_agent" {
-  source = "instana/instana-gcp-agent"
+  source  = "instana/instana-gcp-agent/gcp"
+  version = "1.0.0" # Replace with desired version
 
   # ... other configuration ...
 
@@ -191,7 +193,8 @@ Minimal configuration for development/testing:
 
 ```hcl
 module "instana_agent" {
-  source = "instana/instana-gcp-agent"
+  source  = "instana/instana-gcp-agent/gcp"
+  version = "1.0.0" # Replace with desired version
 
   project_id            = "my-project"
   instance_name         = "instana-agent-dev"
@@ -210,7 +213,8 @@ Production-ready configuration with all options:
 
 ```hcl
 module "instana_agent" {
-  source = "instana/instana-gcp-agent"
+  source  = "instana/instana-gcp-agent/gcp"
+  version = "1.0.0" # Replace with desired version
 
   # Core configuration
   project_id            = "my-project"
@@ -416,12 +420,12 @@ terraform {
 
 🔒 **SECURITY WARNING**: By default, this module creates instances **with a public IP** (`enable_public_ip = true`) so the agent can reach `setup.instana.io` and the Instana backend during installation. Set `enable_public_ip = false` only if your VPC has outbound internet access via one of the supported egress paths — Cloud NAT, an organizational HTTP/HTTPS proxy, or a centralized internet gateway.
 
-#### Production Best Practices
+### Production Best Practices
 
 **✅ Recommended Configuration (Private IP):**
 ```hcl
 module "instana_agent" {
-  source = "instana/instana-gcp-agent"
+  source = "instana/instana-gcp-agent/gcp"
   
   # ... other configuration ...
   
@@ -450,7 +454,7 @@ Identity-Aware Proxy (IAP) enables secure SSH access to VMs without external IPs
 
 ```hcl
 module "instana_agent" {
-  source = "instana/instana-gcp-agent"
+  source = "instana/instana-gcp-agent/gcp"
   
   # ... other configuration ...
   
@@ -497,7 +501,7 @@ If you enable public IP, the VM can directly access the internet:
 
 ```hcl
 module "instana_agent" {
-  source = "instana/instana-gcp-agent"
+  source = "instana/instana-gcp-agent/gcp"
   
   # ... other configuration ...
   

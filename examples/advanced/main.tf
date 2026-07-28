@@ -42,7 +42,8 @@ provider "google" {
 
 # Deploy Instana agent with advanced / production configuration
 module "instana_agent" {
-  source = "../../"
+  source  = "instana/instana-gcp-agent/gcp"
+  version = "1.0.0" # Replace with desired version
 
   # GCP Project to Monitor
   project_id    = var.project_id
