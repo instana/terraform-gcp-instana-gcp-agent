@@ -1,5 +1,11 @@
 # Changelog
 
+## [v1.0.1](https://github.com/instana/terraform-gcp-instana-agent/tree/v1.0.1) - 2026-07-30
+
+### Documentation
+- Added `version` pin (`1.0.0`) to all module source blocks in `README.md` and both example configurations (`examples/basic/main.tf`, `examples/advanced/main.tf`)
+- Updated module source path across README and examples
+
 ## [v1.0.0](https://github.com/instana/terraform-gcp-instana-agent/tree/v1.0.0)
 
 ### Changes
