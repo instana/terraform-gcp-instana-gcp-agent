@@ -763,7 +763,6 @@ terraform-gcp-instana-agent/
 ├── locals.tf                  # Local values
 ├── data.tf                    # Data sources
 ├── versions.tf                # Provider constraints
-├── startup-script.sh          # Agent installation script
 ├── terraform.tfvars.example   # Example variables
 ├── README.md                  # This file
 └── examples/

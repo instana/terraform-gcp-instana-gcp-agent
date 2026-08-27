@@ -35,30 +35,63 @@ locals {
   # Read custom configuration file if provided
   custom_config_content = var.custom_configuration_file != null ? file(var.custom_configuration_file) : ""
 
-  # Base64 encode the custom configuration for secure transfer
-  custom_config_base64 = var.custom_configuration_file != null ? base64encode(local.custom_config_content) : ""
+  # ==============================================================================
+  # GCP setup shell block
+  #
+  # Spliced into the final startup script BEFORE the upstream module's "exit 0".
+  # It:
+  #   1. Writes the GCP service account key file to the VM filesystem.
+  #   2. Uses a Perl in-place patch to overwrite credentials_path in every
+  #      com.instana.plugin.gcp* section of configuration.yaml — regardless of
+  #      whether the current value is blank, '', "", or an existing path.
+  #
+  # Empty string when no key is provided — completely skipped for non-GCP use.
+  # ==============================================================================
+
+  gcp_setup_block = join("", local.gcp_key_base64 != "" ? [
+    "\n",
+    "# ==============================================================================\n",
+    "# GCP Service Account Credentials Setup (injected by terraform-gcp-instana-agent)\n",
+    "# ==============================================================================\n",
+    "\n",
+    "log \"Setting up GCP service account credentials...\"\n",
+    "GCP_CREDS_PATH=\"${var.gcp_credentials_path}\"\n",
+    "GCP_CREDS_DIR=$(dirname \"$GCP_CREDS_PATH\")\n",
+    "mkdir -p \"$GCP_CREDS_DIR\" && chmod 755 \"$GCP_CREDS_DIR\"\n",
+    "printf '%s' '${local.gcp_key_base64}' | base64 -d > \"$GCP_CREDS_PATH\"\n",
+    "chmod 600 \"$GCP_CREDS_PATH\"\n",
+    "log \"GCP credentials written to $GCP_CREDS_PATH\"\n",
+    "\n",
+    "# Patch credentials_path (any value: blank, '', \"\", or existing path) in every com.instana.plugin.gcp* section\n",
+    "CONFIG_FILE=\"/opt/instana/agent/etc/instana/configuration.yaml\"\n",
+    "if [ -f \"$CONFIG_FILE\" ]; then\n",
+    "  CREDS_PATH=\"$GCP_CREDS_PATH\" perl -i -pe '\n",
+    "    BEGIN { $creds = $ENV{CREDS_PATH}; }\n",
+    "    if (/^com\\.instana\\.plugin\\.gcp/) { $in_gcp = 1; }\n",
+    "    elsif ($in_gcp && /^[^\\s#]/ && !/^com\\.instana\\.plugin\\.gcp/) { $in_gcp = 0; }\n",
+    "    if ($in_gcp && /^\\s+credentials_path:/) {\n",
+    "      s|^(\\s*)credentials_path:.*|$1credentials_path: '\"'\"'$creds'\"'\"'|;\n",
+    "    }\n",
+    "  ' \"$CONFIG_FILE\"\n",
+    "  log \"GCP credentials_path updated in all com.instana.plugin.gcp* sections\"\n",
+    "fi\n",
+    "\n",
+    "unset GCP_CREDS_PATH GCP_CREDS_DIR\n",
+  ] : [])
 
   # ==============================================================================
   # Startup script
   # ==============================================================================
 
-  startup_script_content = file("${path.module}/startup-script.sh")
+  # The upstream module's script ends with "exit 0". Strip it, splice in the
+  # GCP setup block, then re-add "exit 0" so the block runs before the process exits.
+  startup_script_content = join("\n", [
+    replace(trimspace(module.instana_agent_script.linux_agent_bootstrap), "/\\nexit 0\\s*$/", ""),
+    local.gcp_setup_block,
+    "exit 0",
+  ])
+
   startup_script_metadata = {
-    # Non-secret configuration
-    INSTANA_ENDPOINT_HOST = var.instana_endpoint_host
-    INSTANA_ENDPOINT_PORT = tostring(var.instana_endpoint_port)
-    INSTANA_AGENT_MODE    = var.instana_agent_mode
-    AGENT_MAX_MEM         = "${var.agent_max_memory}M"
-    GCP_CREDENTIALS_PATH  = var.gcp_credentials_path
-    GCP_PROJECT_ID        = var.project_id
-    CUSTOM_CONFIG_BASE64  = local.custom_config_base64
-
-    # Sensitive values — these are the only metadata keys that carry secrets;
-    # they are cleared by the startup script after use (unset at end of script).
-    INSTANA_AGENT_KEY    = var.instana_agent_key
-    INSTANA_DOWNLOAD_KEY = var.instana_download_key
-    GCP_KEY_BASE64       = local.gcp_key_base64
-
     startup-script = local.startup_script_content
   }
 
@@ -66,29 +99,7 @@ locals {
   # Existing-VM install script / command  (manage_instance = false path)
   # ==============================================================================
 
-  existing_vm_install_script = <<-SCRIPT
-#!/bin/bash
-export INSTANA_AGENT_KEY=${base64encode(var.instana_agent_key)}
-export INSTANA_DOWNLOAD_KEY=${base64encode(var.instana_download_key)}
-export INSTANA_ENDPOINT_HOST=${base64encode(var.instana_endpoint_host)}
-export INSTANA_ENDPOINT_PORT='${var.instana_endpoint_port}'
-export INSTANA_AGENT_MODE=${base64encode(var.instana_agent_mode)}
-export AGENT_MAX_MEM='${var.agent_max_memory}M'
-export GCP_KEY_BASE64='${local.gcp_key_base64}'
-export GCP_CREDENTIALS_PATH=${base64encode(var.gcp_credentials_path)}
-export GCP_PROJECT_ID=${base64encode(var.project_id)}
-export CUSTOM_CONFIG_BASE64='${local.custom_config_base64}'
-
-# Decode base64-encoded string variables that may contain special characters
-INSTANA_AGENT_KEY=$(printf '%s' "$INSTANA_AGENT_KEY" | base64 -d)
-INSTANA_DOWNLOAD_KEY=$(printf '%s' "$INSTANA_DOWNLOAD_KEY" | base64 -d)
-INSTANA_ENDPOINT_HOST=$(printf '%s' "$INSTANA_ENDPOINT_HOST" | base64 -d)
-INSTANA_AGENT_MODE=$(printf '%s' "$INSTANA_AGENT_MODE" | base64 -d)
-GCP_CREDENTIALS_PATH=$(printf '%s' "$GCP_CREDENTIALS_PATH" | base64 -d)
-GCP_PROJECT_ID=$(printf '%s' "$GCP_PROJECT_ID" | base64 -d)
-
-${local.startup_script_content}
-SCRIPT
+  existing_vm_install_script = local.startup_script_content
 
   existing_vm_install_command = "echo '${base64encode(local.existing_vm_install_script)}' | base64 -d | gcloud compute ssh ${local.target_instance_name} --zone=${local.target_instance_zone} --project=${local.target_instance_project_id} --command='sudo bash -s'"
 }
