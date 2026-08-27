@@ -1,5 +1,11 @@
 # Changelog
 
+## [v1.0.2](https://github.com/instana/terraform-gcp-instana-agent/tree/v1.1.0) - 2026-08-27
+
+### Changes
+- Replaced `startup-script.sh` with the upstream `instana/instana-agent-script/instana` Terraform module
+- GCP-specific setup (service account key injection and `configuration.yaml` patching) is now spliced into the upstream module's script via `locals.tf`
+
 ## [v1.0.1](https://github.com/instana/terraform-gcp-instana-agent/tree/v1.0.1) - 2026-07-30
 
 ### Documentation
