@@ -1,4 +1,22 @@
 # ==============================================================================
+# Instana Agent Script Module
+# ==============================================================================
+
+
+module "instana_agent_script" {
+  source = "instana/instana-agent-script/instana"
+  version = ">= 1.0.0"
+
+  instana_agent_key     = var.instana_agent_key
+  instana_download_key  = var.instana_download_key
+  instana_endpoint_host = var.instana_endpoint_host
+  instana_endpoint_port = var.instana_endpoint_port
+  instana_agent_mode    = var.instana_agent_mode
+  agent_max_memory      = var.agent_max_memory
+  custom_config_yaml = local.custom_config_content != "" ? local.custom_config_content : null
+}
+
+# ==============================================================================
 # GCP Remote Monitoring with Instana
 # ==============================================================================
 # This module deploys an Instana agent for monitoring GCP resources.
